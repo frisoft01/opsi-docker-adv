@@ -113,67 +113,22 @@ function init_volumes {
 }
 
 
-function setup_users () {
+function setup_users {
 	echo "* Setup users" 1>&2
-	if [ -z $1 ]; then
-		echo "Credentials for adminuser"
-		export USER_NAME=adminuser
-		export PASSWORD=${OPSI_ADMIN_PASSWORD}
-	else
-		echo "credentials for additional Users"
-		export USER_NAME=${1}
-		export PASSWORD=${2}
+	if ! getent passwd adminuser >/dev/null 2>&1; then
+		echo "Create adminuser" 1>&2
+		useradd -u 1000 -d /data/adminuser -m -g opsiadmin -G opsifileadmins -s /usr/bin/zsh adminuser || true
+		cp -a /root/.zshrc /data/adminuser/
+		chown adminuser:opsiadmin -R /data/adminuser/.zshrc
+		cp -a /root/.oh-my-zsh /data/adminuser/
+		chown -R adminuser:opsiadmin -R /data/adminuser/.oh-my-zsh
 	fi
-#	echo "User: ${USER_NAME}, Passwort: ${PASSWORD}"
-	
-	 if ! getent passwd ${USER_NAME} >/dev/null 2>&1; then
-		 echo "Create ${USER_NAME}" 1>&2
-		 useradd -u "${3}" -d /data/home/${USER_NAME} -m -g opsiadmin -G opsifileadmins -s /usr/bin/zsh ${USER_NAME} || true
-		 cp -a /root/.zshrc /data/home/${USER_NAME}/
-		 chown ${USER_NAME}:opsiadmin -R /data/home/${USER_NAME}/.zshrc
-		 cp -a /root/.oh-my-zsh /data/home/${USER_NAME}/
-		 chown -R ${USER_NAME}:opsiadmin -R /data/home/${USER_NAME}/.oh-my-zsh
-	 fi
-	 echo "${USER_NAME}:${PASSWORD}" | chpasswd
-if [ ! -z ${4} ]; then
+	echo "adminuser:${OPSI_ADMIN_PASSWORD}" | chpasswd
+
 	if [ -z $OPSI_ROOT_PASSWORD ]; then
 		passwd --lock root
 	else
-		 echo "root:${OPSI_ROOT_PASSWORD}" | chpasswd
-	fi
-fi
-}
-
-
-function add_users () {
-	echo "add users"
-	if [ -z "${USERID}" ]; then
-		USERID=1000
-	else 
-		USERID=${USERID}
-	fi
-	if [ ! -z "${ADD_USER}" ]; then     # for zsh if [ ! -z $ADD_USER ]; then
-		setup_users "" "" ${USERID} "true"
-		IFS=', ' read -rA array <<< "$ADD_USER"		# in bash IFS=', ' read -ra array <<< "$ADD_USER"
-		echo "Anzahl übergebener User: ${#array[@]}"
-		if [ ${#array[@]} -gt 0 ]; then
-			echo more then zero user
-			for (( i=1; i<${#array[@]}+1; i++ ));
-			do
-				((++USERID))
-				echo "create user ${array2[1]}"
-				tmp=$(echo "${array[$i]}")
-	#			echo $tmp
-				IFS=':;' read -rA array2 <<< "$tmp"		#in bash IFS=':;' read -ra array2 <<< "$tmp"
-	#			echo "Durchlauf: ${i}, Länge User-Array: ${#array2[@]}" ;
-				setup_users ${array2[1]} ${array2[2]} ${USERID}
-			done
-		else
-			echo "error in generate additional Users"
-		fi
-	else
-		setup_users "" "" ${USERID} "true"
-		echo "no additional users"
+		echo "root:${OPSI_ROOT_PASSWORD}" | chpasswd
 	fi
 }
 
@@ -297,8 +252,7 @@ function entrypoint {
 		opsiconfd setup --log-level-stderr 6
 	fi
 
-	# setup_users
-	add_users
+	setup_users
 	configure_supervisord
 
 	if $run_set_rights; then

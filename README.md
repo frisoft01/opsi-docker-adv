@@ -39,19 +39,33 @@ For security reasons you should change all passwords in this file:
 `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `REDIS_PASSWORD`, `GF_SECURITY_ADMIN_PASSWORD` and `OPSI_ADMIN_PASSWORD`.
 The root account has no password set. If needed, it is possible to set the root password via `OPSI_ROOT_PASSWORD`.
 
+As alternative, you can use docker-compose-env.yml. In this compose-file ale all variables are outsourced in a environment-file.
+You must change the necessary values ​​in the opsi-server.env file before starting the server.
+
 ## Helper script
-There are helper scripts called `opsi-server.sh` and `opsi-server.ps1` that can be used to simplify container handling.
+There are helper scripts called `opsi-server.sh` and `opsi-server.ps1` that can be used to simplify container handling. (not for 
+Server with environment file, this version are only start from the commandline)
 
 In a Linux or macOS environment, open a terminal and make sure that the help script is executable (`chmod +x opsi-server.sh`).
 Now run `./opsi-server.sh` to display the help text of the script.
 In a Windows environment, open a terminal with Powershell and run `.\opsi-server.ps1`.
 
-## Usage as opsi config-server
+## Usage as opsi config-server (with helper script)
 - Adapt the docker-compose.yml to your needs regarding network and volumes.
 - Set the variable `OPSI_HOST_ROLE` to `configserver`.
 - Set the values for `hostname` and `domainname` to reflect your environment.
 The resulting FQDN must resolve to the external address of the container.
 - Start all services with `./opsi-server.sh start` / `.\opsi-server.ps1 start`.
+- You can see the containers status using `./opsi-server.sh status` / `.\opsi-server.ps1 status`.
+- The container logs are available via `./opsi-server.sh logs` / `.\opsi-server.ps1 logs`.
+## Usage as opsi config-server (with env-file)
+- Adapt the opsi-docker.env to your needs regarding passwords, additional users, network and volumes.
+- Set the variable `OPSI_HOST_ROLE` to `configserver`.
+- Set the values for `hostname` and `domainname` to reflect your environment.
+- all other necessary values ​​are self-explanatory
+The resulting FQDN must resolve to the external address of the container.
+- Start all services with `docker compose -f docker-compose-env.yml --env-file opsi-docker.env up` for debugging
+  for production, add a `-d` at the end of the command
 - You can see the containers status using `./opsi-server.sh status` / `.\opsi-server.ps1 status`.
 - The container logs are available via `./opsi-server.sh logs` / `.\opsi-server.ps1 logs`.
 

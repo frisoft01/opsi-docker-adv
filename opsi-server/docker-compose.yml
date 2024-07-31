@@ -9,24 +9,50 @@ x-common-variables: &common-variables
 x-common-mysql-variables: &common-mysql-variables
   MYSQL_DATABASE: opsi
   MYSQL_USER: opsi
-  MYSQL_PASSWORD: eeC9ku3iejeiriSh
+  MYSQL_PASSWORD: a@4Bfs2Vh@XQ2
 
 x-common-redis-variables: &common-redis-variables
-  REDIS_PASSWORD: ideeT2aeliesh4oo
+  REDIS_PASSWORD: y8Zq!W4Dmh8&
 
 x-common-grafana-variables: &common-grafana-variables
   GF_SECURITY_ADMIN_USER: admin
-  GF_SECURITY_ADMIN_PASSWORD: shai6eeQuuQuuo0a
+  GF_SECURITY_ADMIN_PASSWORD: 1&AZ1@3VAbXm8
 
+# volumes:
+  # mysql_data:
+    # driver: local
+  # redis_data:
+    # driver: local
+  # opsi_data:
+    # driver: local
+  # grafana_data:
+    # driver: local
 volumes:
   mysql_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/mysql_data
+      o: bind
   redis_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/redis_data
+      o: bind
   opsi_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/opsi_data
+      o: bind
   grafana_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/grafana_data
+      o: bind
+
 
 services:
   mysql:
@@ -54,13 +80,13 @@ services:
     <<: *restart-policy
     environment:
       <<: [*common-variables, *common-grafana-variables]
-      GF_INSTALL_PLUGINS: grafana-simple-json-datasource
+      GF_INSTALL_PLUGINS: simpod-json-datasource
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
     volumes:
       - grafana_data:/var/lib/grafana
 
   opsi-server:
-    image: uibmz/opsi-server:4.3
+    image: uibmz/opsi-server:4.3.18.18
     #build: .
     <<: *restart-policy
     depends_on:
@@ -76,7 +102,7 @@ services:
       MYSQL_HOST: mysql
       REDIS_HOST: redis
       GRAFANA_HOST: grafana
-      OPSI_ADMIN_PASSWORD: vhahd8usaz
+      OPSI_ADMIN_PASSWORD: Start2020!
       OPSI_ROOT_PASSWORD:
       # configserver / depotserver
       OPSI_HOST_ROLE: configserver
