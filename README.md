@@ -1,6 +1,6 @@
 # Official opsi server image
 
-This image can be used to set up an opsi config-server or an opsi depot-server.
+This image can be used to set up an opsi config-server or an opsi depot-server on armv8-based hardware.
 The only supported depot protocol is WebDAV, there is no Samba support included in this image.
 File backend is not supported, you will need an opsi MySQL module license.
 
@@ -20,9 +20,9 @@ The image is meant to be used with Docker Compose.
 Minimum required Docker Compose version is 1.17.0 with Docker engine 17.09.0+.
 There are four services defined in the docker-compose.yml:
 - mysql: The current stable official MariaDB Server.
-- redis: Latest official Redis Server from Redis Labs with RedisTimeSeries Module.
+- redis: Since there is no official source for redis-arm, the image redisfab/redistimeseries:master-arm64v8-jammy is used here
 - grafana: The latest official Grafana Server from Grafana Labs.
-- opsi-server: Contains the latest opsiconfd, opsipxeconfd, opsi-tftpd-hpa and opsi-utils from uib GmbH.
+- opsi-server: There is no official ARM image (yet), you have to build it yourself. A necessary Dockerfile was also delivered
 
 # How to use this image
 ## Install Docker
@@ -50,6 +50,9 @@ In a Linux or macOS environment, open a terminal and make sure that the help scr
 Now run `./opsi-server.sh` to display the help text of the script.
 In a Windows environment, open a terminal with Powershell and run `.\opsi-server.ps1`.
 
+## Preparations
+You must build the necessary image for opsi 4.3 from the command line with this comman `docker build -t opsi-arm:4.3-testing .`
+
 ## Usage as opsi config-server (with helper script)
 - Adapt the docker-compose.yml to your needs regarding network and volumes.
 - Set the variable `OPSI_HOST_ROLE` to `configserver`.
@@ -58,6 +61,7 @@ The resulting FQDN must resolve to the external address of the container.
 - Start all services with `./opsi-server.sh start` / `.\opsi-server.ps1 start`.
 - You can see the containers status using `./opsi-server.sh status` / `.\opsi-server.ps1 status`.
 - The container logs are available via `./opsi-server.sh logs` / `.\opsi-server.ps1 logs`.
+
 ## Usage as opsi config-server (with env-file)
 - Adapt the opsi-docker.env to your needs regarding passwords, additional users, network and volumes.
 - Set the variable `OPSI_HOST_ROLE` to `configserver`.
