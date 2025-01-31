@@ -41,7 +41,9 @@ services:
       - mysql_data:/var/lib/mysql
 
   redis:
-    image: redislabs/redistimeseries:latest
+#    image: redislabs/redistimeseries:latest
+    image: redisfab/redistimeseries:master-arm64v8-jammy
+
     <<: *restart-policy
     command: sh -c "redis-server --requirepass $$REDIS_PASSWORD --loadmodule /usr/lib/redis/modules/redistimeseries.so"
     environment:
@@ -60,7 +62,8 @@ services:
       - grafana_data:/var/lib/grafana
 
   opsi-server:
-    image: uibmz/opsi-server:4.3
+#    image: uibmz/opsi-server:4.3
+    image: opsi-arm:4.3-testing
     #build: .
     <<: *restart-policy
     depends_on:

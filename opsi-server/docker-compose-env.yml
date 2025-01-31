@@ -20,50 +20,83 @@ x-common-grafana-variables: &common-grafana-variables
 
 volumes:
   mysql_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/mysql_data
+      o: bind
   redis_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/redis_data
+      o: bind
   opsi_data:
-    driver: local
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/opsi_data
+      o: bind
   grafana_data:
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/grafana_data
+      o: bind
+  opsi_external_wb2:
     driver: local
+    driver_opts:
+      type: "nfs"      
+      o: "addr=${OPSI_EXTERNAL_NFS_SERVER},nfsvers=${OPSI_EXTERNAL_NFS_VER},nolock,soft,rw"
+      device: ":${OPSI_EXTERNAL_NFS_PATH}"
+networks:
+    opsi-server_default:
+        external: true
+        name: opsi-server_default
 
 services:
-  mysql:
-    image: mariadb:10.7
-    env_file:
-      - opsi-server.env
-    <<: *restart-policy
-    command: --max_connections=${MYSQL_MAX_CONNECTIONS} --max_allowed_packet=${MYSQL_MAX_ALLOWED_PACKET} --sort_buffer_size=${MYSQL_SORT_BUFFER_SIZE}
-    environment:
-       <<: [*common-variables, *common-mysql-variables]
-       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-       MYSQL_INITDB_SKIP_TZINFO: 1
-    volumes:
-      - mysql_data:/var/lib/mysql
+#   mysql:
+#     image: mariadb:10.7
+#     env_file:
+#       - opsi-server.env
+#     <<: *restart-policy
+#     command: --max_connections=${MYSQL_MAX_CONNECTIONS} --max_allowed_packet=${MYSQL_MAX_ALLOWED_PACKET} --sort_buffer_size=${MYSQL_SORT_BUFFER_SIZE}
+#     environment:
+#        <<: [*common-variables, *common-mysql-variables]
+#        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+#        MYSQL_INITDB_SKIP_TZINFO: 1
+#     volumes:
+#       - mysql_data:/var/lib/mysql
 
   redis:
-    image: redislabs/redistimeseries:latest
+#    image: redislabs/redistimeseries:latest
+    image: redisfab/redistimeseries:master-arm64v8-jammy
+
     env_file:
       - opsi-server.env
     <<: *restart-policy
-    command: sh -c "redis-server --requirepass $$REDIS_PASSWORD --loadmodule /usr/lib/redis/modules/redistimeseries.so"
+#    command: sh -c "redis-server --requirepass $$REDIS_PASSWORD --loadmodule /usr/lib/redis/modules/redistimeseries.so"
+    command: sh -c "redis-server --requirepass \"${REDIS_PASSWORD}\" --loadmodule /usr/lib/redis/modules/redistimeseries.so"
+    networks:
+      - opsi-server_default
     environment:
       <<: [*common-variables, *common-redis-variables]
     volumes:
       - redis_data:/data
 
-  grafana:
-    image: grafana/grafana:latest
-    env_file:
-      - opsi-server.env
-    <<: *restart-policy
-    environment:
-      <<: [*common-variables, *common-grafana-variables]
-      GF_INSTALL_PLUGINS: simpod-json-datasource
-      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
-    volumes:
-      - grafana_data:/var/lib/grafana
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   env_file:
+  #     - opsi-server.env
+  #   <<: *restart-policy
+  #   networks:
+  #     - opsi-server_default
+  #   environment:
+  #     <<: [*common-variables, *common-grafana-variables]
+  #     GF_INSTALL_PLUGINS: simpod-json-datasource
+  #     GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
 
   opsi-server:
     image: ${DOCKER_IMAGE_OPSI_SERVER}
@@ -71,17 +104,20 @@ services:
       - opsi-server.env
     #build: .
     <<: *restart-policy
+    networks:
+      - opsi-server_default
     depends_on:
-      - mysql
+#      - mysql
       - redis
     ports:
-      - "${OPSICONFD_PORT}:4447"
-      - "${OPSICONFD_PORT_UDP}:69/udp"
-    hostname: ${HOSTNAME}
-    domainname: ${DOMAINNAME}
+      - "${OPSI_WEBSERVICE_EXTERNAL_PORT}:4447"
+      - "${OPSI_TFTP_EXTERNAL_PORT}:69/udp"
+    hostname: ${HOST_NAME}
+    domainname: ${DOMAIN_NAME}
     environment:
       <<: [*common-variables, *common-mysql-variables, *common-grafana-variables, *common-redis-variables]
-      MYSQL_HOST: mysql
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PROPERTIES: "${MYSQL_PROPERTIES}"
       REDIS_HOST: redis
       GRAFANA_HOST: grafana
       OPSI_ADMIN_PASSWORD: ${OPSI_ADMIN_PASSWORD}
@@ -101,4 +137,5 @@ services:
       OPSILICSRV_URL: ${OPSILICSRV_URL}
       OPSILICSRV_TOKEN: ${OPSILICSRV_TOKEN}
     volumes:
-      - opsi_data:/data
+      - opsi_external_wb2:/data
+    

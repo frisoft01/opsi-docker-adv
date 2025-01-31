@@ -1,6 +1,8 @@
-# Official opsi server image
+# forked from Official opsi server image
 
-This image can be used to set up an opsi config-server or an opsi depot-server.
+This package is patched for my homelab
+
+This image can be used to set up an opsi config-server or an opsi depot-server on armv8-based hardware.
 The only supported depot protocol is WebDAV, there is no Samba support included in this image.
 File backend is not supported, you will need an opsi MySQL module license.
 
@@ -10,8 +12,9 @@ https://github.com/opsi-org/opsi-docker
 
 # Quick start
 ```
-git clone https://github.com/opsi-org/opsi-docker.git
+git clone https://github.com//opsi-docker.git
 cd opsi-docker/opsi-server
+
 ./opsi-server.sh start
 ```
 
@@ -20,15 +23,14 @@ The image is meant to be used with Docker Compose.
 Minimum required Docker Compose version is 1.17.0 with Docker engine 17.09.0+.
 There are four services defined in the docker-compose.yml:
 - mysql: The current stable official MariaDB Server.
-- redis: Latest official Redis Server from Redis Labs with RedisTimeSeries Module.
+- redis: Since there is no official source for redis-arm, the image redisfab/redistimeseries:master-arm64v8-jammy is used here
 - grafana: The latest official Grafana Server from Grafana Labs.
-- opsi-server: Contains the latest opsiconfd, opsipxeconfd, opsi-tftpd-hpa and opsi-utils from uib GmbH.
+- opsi-server: There is no official ARM image (yet), you have to build it yourself. A necessary Dockerfile was also delivered
 
 # How to use this image
 ## Install Docker
 Install Docker or Docker Desktop for Linux, macOS or Windows.
 Open an terminal and make sure the command `docker run --rm hello-world` is working.
-Alternatively you can use podman with docker compatibility enabled see [here](https://wiki.archlinux.org/title/Podman) for more info.
 
 ## docker-compose.yml
 The docker-compose.yml is a YAML file defining services, networks and volumes.
@@ -40,19 +42,37 @@ For security reasons you should change all passwords in this file:
 `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `REDIS_PASSWORD`, `GF_SECURITY_ADMIN_PASSWORD` and `OPSI_ADMIN_PASSWORD`.
 The root account has no password set. If needed, it is possible to set the root password via `OPSI_ROOT_PASSWORD`.
 
+As alternative, you can use docker-compose-env.yml. In this compose-file ale all variables are outsourced in a environment-file.
+You must change the necessary values ​​in the opsi-server.env file before starting the server.
+
 ## Helper script
-There are helper scripts called `opsi-server.sh` and `opsi-server.ps1` that can be used to simplify container handling.
+There are helper scripts called `opsi-server.sh` and `opsi-server.ps1` that can be used to simplify container handling. (not for 
+Server with environment file, this version are only start from the commandline)
 
 In a Linux or macOS environment, open a terminal and make sure that the help script is executable (`chmod +x opsi-server.sh`).
 Now run `./opsi-server.sh` to display the help text of the script.
 In a Windows environment, open a terminal with Powershell and run `.\opsi-server.ps1`.
 
-## Usage as opsi config-server
+## Preparations
+You must build the necessary image for opsi 4.3 from the command line with this comman `docker build -t opsi-arm:4.3-testing .`
+
+## Usage as opsi config-server (with helper script)
 - Adapt the docker-compose.yml to your needs regarding network and volumes.
 - Set the variable `OPSI_HOST_ROLE` to `configserver`.
 - Set the values for `hostname` and `domainname` to reflect your environment.
 The resulting FQDN must resolve to the external address of the container.
 - Start all services with `./opsi-server.sh start` / `.\opsi-server.ps1 start`.
+- You can see the containers status using `./opsi-server.sh status` / `.\opsi-server.ps1 status`.
+- The container logs are available via `./opsi-server.sh logs` / `.\opsi-server.ps1 logs`.
+
+## Usage as opsi config-server (with env-file)
+- Adapt the opsi-docker.env to your needs regarding passwords, additional users, network and volumes.
+- Set the variable `OPSI_HOST_ROLE` to `configserver`.
+- Set the values for `hostname` and `domainname` to reflect your environment.
+- all other necessary values ​​are self-explanatory
+The resulting FQDN must resolve to the external address of the container.
+- Start all services with `docker compose -f docker-compose-env.yml --env-file opsi-docker.env up` for debugging
+  for production, add a `-d` at the end of the command
 - You can see the containers status using `./opsi-server.sh status` / `.\opsi-server.ps1 status`.
 - The container logs are available via `./opsi-server.sh logs` / `.\opsi-server.ps1 logs`.
 
@@ -74,4 +94,4 @@ by setting the environment variable `OPSI_TFTPBOOT` to `"false"`.
 - Login as `adminuser` with password `<OPSI_ADMIN_PASSWORD>` as set in the docker-compose.yml.
 - Open the `Licensing`-Tab and upload your opsi license file.
 - You can use the `Terminal`-Tab to get a terminal on your server.
-- Continue reading https://docs.opsi.org/opsi-docs-de/stable/first-steps/first-steps.html
+- Continue reading https://docs.opsi.org/opsi-docs-de/4.2/getting-started/getting-started.html

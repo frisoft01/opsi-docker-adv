@@ -1,0 +1,77 @@
+# ignored options for 'mariadb'
+# --detach
+name: homelab
+
+x-restart-policy: &restart-policy
+  restart: ${RESTART_POLICY}
+
+x-common-variables: &common-variables
+  TZ: ${TIMEZONE}
+
+x-common-mysql-variables: &common-mysql-variables
+  MYSQL_DATABASE: ${MYSQL_DATABASE}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+x-common-redis-variables: &common-redis-variables
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+x-common-grafana-variables: &common-grafana-variables
+  GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+  GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+
+services:
+    mariadb:
+      container_name: opsi-server-mysql-1
+      restart: unless-stopped
+      hostname: ${MYSQL_HOST}
+      networks:
+          - opsi-server_default
+      environment:
+          - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+          - MYSQL_INITDB_SKIP_TZINFO=1
+          - MYSQL_DATABASE=${MYSQL_DATABASE}
+          - MYSQL_USER=${MYSQL_USER}
+          - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      image: mariadb:10.7
+      command: --port 3306 --max_connections=1000 --max_allowed_packet=256M --sort_buffer_size=4M
+      volumes:
+      - mysql_data:/var/lib/mysql
+    grafana:
+      image: grafana/grafana:latest
+      <<: *restart-policy
+      networks:
+          - opsi-server_default
+      hostname: ${GF_HOST}
+      environment:
+          <<: [*common-variables, *common-grafana-variables]
+          GF_INSTALL_PLUGINS: simpod-json-datasource
+          GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
+      volumes:
+        - grafana_data:/var/lib/grafana
+
+
+volumes:
+  mysql_data:
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/mysql_data
+      o: bind
+  grafana_data:
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/grafana_data
+      o: bind
+
+# samba-net2:
+#         ipv4_address: 172.16.101.1
+
+networks:
+  opsi-server_default:
+    driver: bridge
+    name: opsi-server_default
+  samba-net2:
+    name: samba-dc
+    external: true
