@@ -21,36 +21,87 @@ x-common-grafana-variables: &common-grafana-variables
   GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
 
 services:
-    mariadb:
-      container_name: opsi-server-mysql-1
-      restart: unless-stopped
-      hostname: ${MYSQL_HOST}
-      networks:
-          - opsi-server_default
-      environment:
-          - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-          - MYSQL_INITDB_SKIP_TZINFO=1
-          - MYSQL_DATABASE=${MYSQL_DATABASE}
-          - MYSQL_USER=${MYSQL_USER}
-          - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      image: mariadb:10.7
-      command: --port 3306 --max_connections=1000 --max_allowed_packet=256M --sort_buffer_size=4M
-      volumes:
-      - mysql_data:/var/lib/mysql
-    grafana:
-      image: grafana/grafana:latest
-      <<: *restart-policy
-      networks:
-          - opsi-server_default
-      hostname: ${GF_HOST}
-      environment:
-          <<: [*common-variables, *common-grafana-variables]
-          GF_INSTALL_PLUGINS: simpod-json-datasource
-          GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
-      volumes:
-        - grafana_data:/var/lib/grafana
-
-
+  mariadb:
+    container_name: homelab-mariadb-1
+    restart: unless-stopped
+    hostname: ${MYSQL_HOST}
+    networks:
+        - opsi-server_default
+    environment:
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_INITDB_SKIP_TZINFO=1
+        - MYSQL_DATABASE=${MYSQL_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    image: mariadb:10.7
+    command: --port 3306 --max_connections=1000 --max_allowed_packet=256M --sort_buffer_size=4M
+    volumes:
+    - mysql_data:/var/lib/mysql
+  grafana:
+    image: grafana/grafana:latest
+    <<: *restart-policy
+    networks:
+        - opsi-server_default
+    hostname: ${GF_HOST}
+    environment:
+        <<: [*common-variables, *common-grafana-variables]
+        GF_INSTALL_PLUGINS: simpod-json-datasource
+        GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana"
+    volumes:
+      - grafana_data:/var/lib/grafana
+  redis:
+#    image: redislabs/redistimeseries:latest
+#    image: redisfab/redistimeseries:master-arm64v8-jammy
+    image: redis/redis-stack-server:latest
+    <<: *restart-policy
+#    command: sh -c "redis-server --requirepass $$REDIS_PASSWORD --loadmodule /usr/lib/redis/modules/redistimeseries.so"
+    command: sh -c "redis-server --requirepass \"${REDIS_PASSWORD}\" --loadmodule /opt/redis-stack/lib/redistimeseries.so"
+    networks:
+      - opsi-server_default
+    environment:
+      <<: [*common-variables, *common-redis-variables]
+    volumes:
+      - redis_data:/data
+  opsi-server:
+    image: ${DOCKER_IMAGE_OPSI_SERVER}
+    env_file:
+      - opsi-server.env
+    #build: .
+    <<: *restart-policy
+    networks:
+      - opsi-server_default
+    depends_on:
+#      - mysql
+      - redis
+    ports:
+      - "${OPSI_WEBSERVICE_EXTERNAL_PORT}:4447"
+      - "${OPSI_TFTP_EXTERNAL_PORT}:69/udp"
+    hostname: ${HOST_NAME}
+    domainname: ${DOMAIN_NAME}
+    environment:
+      <<: [*common-variables, *common-mysql-variables, *common-grafana-variables, *common-redis-variables]
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PROPERTIES: "${MYSQL_PROPERTIES}"
+      REDIS_HOST: redis
+      GRAFANA_HOST: grafana
+      OPSI_ADMIN_PASSWORD: ${OPSI_ADMIN_PASSWORD}
+      OPSI_ROOT_PASSWORD: ${OPSI_ROOT_PASSWORD}
+      # configserver / depotserver
+      OPSI_HOST_ROLE: ${OPSI_HOST_ROLE}
+      # Run tftp server and opsipxeconfd? ("true"/"false")
+      OPSI_TFTPBOOT: "${OPSI_TFTPBOOT}"
+      # OPSI_SERVICE_ADDRESS and OPSI_HOST_KEY is needed for depotserver role only
+      OPSI_SERVICE_ADDRESS: ${OPSI_SERVICE_ADDRESS}
+      OPSI_HOST_KEY: ${OPSI_HOST_KEY}
+      # opsconfd config
+      OPSICONFD_GRAFANA_EXTERNAL_URL: ${OPSICONFD_GRAFANA_EXTERNAL_URL}
+      OPSICONFD_LOG_LEVEL: ${OPSICONFD_LOG_LEVEL}
+      OPSICONFD_LOG_LEVEL_FILE: ${OPSICONFD_LOG_LEVEL_FILE}
+      OPSICONFD_RESTORE_BACKUP_URL: ${OPSICONFD_RESTORE_BACKUP_URL}
+      OPSILICSRV_URL: ${OPSILICSRV_URL}
+      OPSILICSRV_TOKEN: ${OPSILICSRV_TOKEN}
+    volumes:
+      - opsi_external_wb2:/data
 volumes:
   mysql_data:
     driver: local # Define the driver and options under the volume name
@@ -64,6 +115,18 @@ volumes:
       type: none
       device: /data/grafana_data
       o: bind
+  redis_data:
+    driver: local # Define the driver and options under the volume name
+    driver_opts:
+      type: none
+      device: /data/redis_data
+      o: bind
+  opsi_external_wb2:
+    driver: local
+    driver_opts:
+      type: "nfs"      
+      o: "addr=${OPSI_EXTERNAL_NFS_SERVER},nfsvers=${OPSI_EXTERNAL_NFS_VER},nolock,soft,rw"
+      device: ":${OPSI_EXTERNAL_NFS_PATH}"
 
 # samba-net2:
 #         ipv4_address: 172.16.101.1

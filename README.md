@@ -12,7 +12,7 @@ https://github.com/opsi-org/opsi-docker
 
 # Quick start
 ```
-git clone https://github.com//opsi-docker.git
+git clone https://github.com/frisoft01/opsi-docker-adv.git
 cd opsi-docker/opsi-server
 
 ./opsi-server.sh start
