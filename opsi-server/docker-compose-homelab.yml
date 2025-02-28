@@ -55,7 +55,7 @@ services:
     image: redis/redis-stack-server:latest
     <<: *restart-policy
 #    command: sh -c "redis-server --requirepass $$REDIS_PASSWORD --loadmodule /usr/lib/redis/modules/redistimeseries.so"
-    command: sh -c "redis-server --requirepass \"${REDIS_PASSWORD}\" --loadmodule /opt/redis-stack/lib/redistimeseries.so"
+    command: sh -c "redis-server --dir /data  --requirepass $$REDIS_PASSWORD --appendonly yes --loadmodule /opt/redis-stack/lib/redistimeseries.so"
     networks:
       - opsi-server_default
     environment:
@@ -69,9 +69,16 @@ services:
     #build: .
     <<: *restart-policy
     networks:
-      - opsi-server_default
+      samba-net2:
+        ipv4_address: 172.16.101.17
+      opsi-server_default:
+    dns_search:
+      - FRISOFT.INTERNAL
+    dns:
+      - 172.16.101.1
+      - 172.16.101.3  
     depends_on:
-#      - mysql
+      - mariadb
       - redis
     ports:
       - "${OPSI_WEBSERVICE_EXTERNAL_PORT}:4447"
